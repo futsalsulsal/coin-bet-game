@@ -109,6 +109,14 @@
     82%{transform:rotateY(1980deg) translateY(-30px) scale(1.04)}
     100%{transform:rotateY(var(--end)) translateY(0) scale(1)}
   }
+  /* モバイルの固定バー内に収まる、ジャンプ控えめのフリップ */
+  @keyframes flipM{
+    0%{transform:rotateY(0) translateY(0)}
+    18%{transform:rotateY(540deg) translateY(-22px) scale(1.05)}
+    50%{transform:rotateY(1260deg) translateY(-30px) scale(1.06)}
+    82%{transform:rotateY(1980deg) translateY(-10px) scale(1.03)}
+    100%{transform:rotateY(var(--end)) translateY(0) scale(1)}
+  }
 
   .result-banner{
     min-height:46px;display:flex;align-items:center;justify-content:center;gap:12px;
@@ -250,7 +258,8 @@
 
   /* ===== Smartphone ===== */
   @media(max-width:600px){
-    body{padding:14px 10px 44px}
+    /* 上部のコイン固定バー分だけ余白を確保 */
+    body{padding:152px 10px 44px}
     header.top{margin-bottom:16px;gap:10px}
     .brand .mark{width:40px;height:40px;font-size:18px}
     .brand h1{font-size:18px}
@@ -261,12 +270,20 @@
     .card + .card{margin-top:14px}
     .card h2{font-size:12px;margin-bottom:13px}
 
-    /* coin */
-    .coin-scene,.coin{width:130px;height:130px}
-    .face{font-size:42px}
-    .face .lbl{font-size:12px;letter-spacing:2px}
-    .stage{gap:14px;padding:14px 0 4px}
-    .result-banner{font-size:16px}
+    /* coin — スクロールしても常に画面上部に固定（ピン留め） */
+    .stage{
+      position:fixed; top:0; left:0; right:0; z-index:40;
+      margin:0; padding:9px 0 7px; gap:4px;
+      background:linear-gradient(180deg, rgba(18,24,49,.97), rgba(10,14,26,.93));
+      -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+      border-bottom:1px solid var(--line);
+      box-shadow:0 6px 22px rgba(0,0,0,.45);
+    }
+    .coin-scene,.coin{width:98px;height:98px}
+    .face{font-size:32px}
+    .face .lbl{font-size:10px;letter-spacing:1.5px}
+    .result-banner{font-size:14px;min-height:22px}
+    .coin.flipping{animation-name:flipM}   /* 固定バー内に収まる小さめのトス */
 
     /* hero */
     .hero{padding:14px}
@@ -304,10 +321,11 @@
 
   /* ===== Small phones ===== */
   @media(max-width:380px){
+    body{padding:138px 10px 44px}
     .stats{grid-template-columns:1fr 1fr;gap:8px}
     .hero .v{font-size:30px}
-    .coin-scene,.coin{width:116px;height:116px}
-    .face{font-size:38px}
+    .coin-scene,.coin{width:86px;height:86px}
+    .face{font-size:28px}
   }
 </style>
 </head>
