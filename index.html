@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>コインベットゲーム ｜ 資金推移シミュレーター</title>
+<style>
+  :root{
+    --bg-0:#0a0e1a;
+    --bg-1:#121831;
+    --panel:#161d36;
+    --panel-2:#1c2545;
+    --line:#2a345c;
+    --txt:#e8edff;
+    --txt-dim:#8d97bd;
+    --gold:#f4c452;
+    --gold-2:#e0a526;
+    --green:#3ddc84;
+    --red:#ff5d6c;
+    --blue:#5b8cff;
+    --shadow:0 18px 50px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,-apple-system,sans-serif;
+    color:var(--txt);
+    background:
+      radial-gradient(1100px 700px at 12% -10%, #1d2750 0%, transparent 55%),
+      radial-gradient(1000px 800px at 100% 0%, #2a1840 0%, transparent 50%),
+      linear-gradient(160deg, var(--bg-0), var(--bg-1) 60%, #0a0e1a);
+    min-height:100vh;
+    padding:28px 18px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;gap:18px;
+    margin-bottom:24px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand .mark{
+    width:46px;height:46px;border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #ffe9a8, var(--gold) 45%, var(--gold-2) 75%, #9a6a10);
+    box-shadow:0 6px 18px rgba(244,196,82,.35), inset 0 2px 4px rgba(255,255,255,.5);
+    display:grid;place-items:center;font-weight:900;color:#5a3c00;font-size:20px;
+  }
+  .brand h1{font-size:21px;letter-spacing:.5px;font-weight:800}
+  .brand p{font-size:12px;color:var(--txt-dim);margin-top:2px}
+  .tag{
+    font-size:11px;color:var(--gold);border:1px solid rgba(244,196,82,.35);
+    padding:5px 11px;border-radius:999px;background:rgba(244,196,82,.07);white-space:nowrap;
+  }
+
+  .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}}
+
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--bg-1));
+    border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+    padding:22px;
+  }
+  .card + .card{margin-top:20px}
+  .card h2{font-size:13px;letter-spacing:1.5px;color:var(--txt-dim);text-transform:uppercase;
+    margin-bottom:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .card h2::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--gold);transform:rotate(45deg)}
+  .card h2.row-h2{justify-content:space-between}
+  .card h2.row-h2::before{display:none}
+  .row-h2-l{display:flex;align-items:center;gap:8px}
+  .row-h2-l::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--gold);transform:rotate(45deg)}
+  .copybtn{font-size:11px;letter-spacing:.5px;padding:6px 12px;border-radius:8px;
+    background:var(--panel-2);color:var(--txt-dim);border:1px solid var(--line);text-transform:none}
+  .copybtn:hover{border-color:var(--gold);color:var(--gold)}
+  .copybtn.done{border-color:var(--green);color:var(--green)}
+
+  /* ===== Coin stage ===== */
+  .stage{
+    display:flex;flex-direction:column;align-items:center;gap:18px;
+    padding:22px 0 8px;
+  }
+  .coin-scene{perspective:1000px;width:170px;height:170px}
+  .coin{
+    position:relative;width:170px;height:170px;
+    transform-style:preserve-3d;transition:none;
+  }
+  .coin.flipping{animation:flip 1.6s cubic-bezier(.3,.05,.2,1) forwards}
+  .face{
+    position:absolute;inset:0;border-radius:50%;
+    display:grid;place-items:center;backface-visibility:hidden;
+    font-weight:900;font-size:54px;
+    box-shadow:inset 0 0 0 6px rgba(255,255,255,.18), inset 0 8px 22px rgba(255,255,255,.35),
+               inset 0 -12px 28px rgba(0,0,0,.4), 0 16px 30px rgba(0,0,0,.5);
+  }
+  .face .lbl{font-size:15px;letter-spacing:3px;margin-top:4px;font-weight:800}
+  .face .ctr{display:flex;flex-direction:column;align-items:center;line-height:1}
+  .face.heads{
+    background:radial-gradient(circle at 34% 26%, #fff0bf, var(--gold) 48%, var(--gold-2) 78%, #8c5f0d);
+    color:#6a4700;
+  }
+  .face.tails{
+    background:radial-gradient(circle at 34% 26%, #e6ecff, #9fb0e6 48%, #6c7fc4 78%, #3a477e);
+    color:#222a52;transform:rotateY(180deg);
+  }
+  @keyframes flip{
+    0%{transform:rotateY(0) translateY(0)}
+    18%{transform:rotateY(540deg) translateY(-70px) scale(1.08)}
+    50%{transform:rotateY(1260deg) translateY(-90px) scale(1.1)}
+    82%{transform:rotateY(1980deg) translateY(-30px) scale(1.04)}
+    100%{transform:rotateY(var(--end)) translateY(0) scale(1)}
+  }
+
+  .result-banner{
+    min-height:46px;display:flex;align-items:center;justify-content:center;gap:12px;
+    font-weight:800;font-size:18px;opacity:0;transform:translateY(6px);transition:.35s;
+  }
+  .result-banner.show{opacity:1;transform:none}
+  .result-banner .chip{
+    padding:6px 14px;border-radius:999px;font-size:14px;
+  }
+  .chip.win{background:rgba(61,220,132,.16);color:var(--green);border:1px solid rgba(61,220,132,.4)}
+  .chip.lose{background:rgba(255,93,108,.16);color:var(--red);border:1px solid rgba(255,93,108,.4)}
+  .delta.up{color:var(--green)}
+  .delta.down{color:var(--red)}
+
+  /* ===== Balance hero ===== */
+  .hero{
+    text-align:center;border:1px solid var(--line);border-radius:16px;
+    background:linear-gradient(180deg, var(--panel-2), transparent);
+    padding:18px;margin-bottom:8px;
+  }
+  .hero .k{font-size:12px;color:var(--txt-dim);letter-spacing:2px}
+  .hero .v{font-size:42px;font-weight:900;letter-spacing:.5px;margin-top:4px;
+    font-variant-numeric:tabular-nums;transition:color .3s}
+  .hero .v .yen{font-size:22px;color:var(--gold);margin-right:4px}
+  .hero .pl{font-size:14px;margin-top:6px;font-weight:700;font-variant-numeric:tabular-nums}
+  .poolrow{display:flex;gap:10px;margin-top:14px}
+  .poolcell{flex:1;background:#0d1226;border:1px solid var(--line);border-radius:10px;
+    padding:9px 12px;display:flex;flex-direction:column;gap:3px}
+  .poolcell span{font-size:11px;color:var(--txt-dim)}
+  .poolcell b{font-size:17px;font-variant-numeric:tabular-nums}
+  #h-pool{color:var(--gold)}
+  #h-total{color:var(--txt)}
+
+  /* ===== Stats grid ===== */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+    padding:12px 14px;
+  }
+  .stat .k{font-size:11px;color:var(--txt-dim);letter-spacing:.5px}
+  .stat .v{font-size:19px;font-weight:800;margin-top:5px;font-variant-numeric:tabular-nums}
+  .stat .v.sm{font-size:16px}
+
+  /* ===== Controls ===== */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;color:var(--txt-dim);margin-bottom:6px;letter-spacing:.5px}
+  .inrow{display:flex;gap:10px}
+  input[type=number]{
+    width:100%;background:#0d1226;border:1px solid var(--line);border-radius:10px;
+    color:var(--txt);font-size:18px;font-weight:700;padding:11px 13px;outline:none;
+    font-variant-numeric:tabular-nums;transition:border .2s, box-shadow .2s;
+  }
+  input[type=number]:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(244,196,82,.15)}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:10px;font-weight:800;
+    transition:transform .08s, filter .2s, box-shadow .2s;letter-spacing:.5px;
+  }
+  button:active{transform:translateY(1px) scale(.98)}
+  button:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.4)}
+  .mini{flex:1;min-width:90px;padding:12px;font-size:15px;
+    background:var(--panel-2);color:var(--txt);border:1px solid var(--line)}
+  .mini:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+  .mini.preset{font-size:13px;flex:1 1 0;min-width:0;padding:10px 6px}
+  .mini.preset.active{background:rgba(91,140,255,.18);border-color:var(--blue);color:#cdd9ff}
+  .bet{
+    width:100%;padding:16px;font-size:20px;margin-top:12px;color:#3a2600;
+    background:linear-gradient(180deg,#ffe08a,var(--gold) 55%,var(--gold-2));
+    box-shadow:0 10px 24px rgba(244,196,82,.32), inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .bet:hover:not(:disabled){filter:brightness(1.06)}
+  .poolbtns{display:flex;gap:10px;margin-top:10px}
+  .pool{flex:1;padding:13px;font-size:14px;color:#0d2b1a;
+    background:linear-gradient(180deg,#7af0ad,var(--green) 60%,#21a85e);
+    box-shadow:0 8px 20px rgba(61,220,132,.28), inset 0 1px 0 rgba(255,255,255,.45)}
+  .pool:hover:not(:disabled){filter:brightness(1.05)}
+  .pool.restore{color:#2a1c00;
+    background:linear-gradient(180deg,#ffe08a,var(--gold) 60%,var(--gold-2));
+    box-shadow:0 8px 20px rgba(244,196,82,.28), inset 0 1px 0 rgba(255,255,255,.5)}
+  .reset{width:100%;padding:11px;font-size:13px;margin-top:10px;
+    background:transparent;color:var(--txt-dim);border:1px solid var(--line)}
+  .reset:hover{color:var(--red);border-color:var(--red)}
+
+  .err{color:var(--red);font-size:13px;font-weight:700;min-height:18px;margin-top:8px;text-align:center}
+
+  .strat-note{font-size:11px;color:var(--txt-dim);line-height:1.7;margin-top:10px;
+    border-top:1px dashed var(--line);padding-top:10px}
+  .strat-note b{color:var(--gold)}
+
+  /* ===== Chart ===== */
+  canvas#chart{width:100%;height:220px;display:block;border-radius:10px}
+  .chartbox{background:#0c1124;border:1px solid var(--line);border-radius:12px;padding:8px}
+
+  /* ===== History ===== */
+  .histwrap{max-height:300px;overflow:auto;border-radius:10px;border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  th{position:sticky;top:0;background:var(--panel-2);color:var(--txt-dim);font-size:11px;
+    letter-spacing:.5px;z-index:1;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:center}
+  td{border-bottom:1px solid rgba(42,52,92,.5)}
+  tbody tr:hover{background:rgba(91,140,255,.06)}
+  td.res .face-mini{display:inline-block;width:18px;height:18px;border-radius:50%;
+    vertical-align:middle;margin-right:5px;font-size:0}
+  .face-mini.h{background:radial-gradient(circle at 35% 30%,#ffe9a8,var(--gold-2))}
+  .face-mini.t{background:radial-gradient(circle at 35% 30%,#c3cdf0,#6c7fc4)}
+  tbody tr.poolhist{background:rgba(244,196,82,.08)}
+  tbody tr.poolhist td{border-bottom:1px solid rgba(244,196,82,.25);font-weight:700}
+  .empty{text-align:center;color:var(--txt-dim);padding:30px;font-size:13px}
+
+  /* ===== Game over overlay ===== */
+  .overlay{
+    position:fixed;inset:0;background:rgba(6,9,18,.82);backdrop-filter:blur(6px);
+    display:none;place-items:center;z-index:50;padding:20px;
+  }
+  .overlay.show{display:grid;animation:fade .4s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{
+    background:linear-gradient(180deg,var(--panel),var(--bg-1));border:1px solid var(--line);
+    border-radius:20px;padding:34px;max-width:420px;width:100%;text-align:center;box-shadow:var(--shadow)
+  }
+  .modal .big{font-size:30px;font-weight:900;color:var(--red);margin-bottom:8px}
+  .modal p{color:var(--txt-dim);font-size:14px;line-height:1.7;margin-bottom:18px}
+  .modal .sumrow{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .modal .sumrow span:last-child{font-weight:800}
+  .modal button{margin-top:20px;width:100%;padding:14px;font-size:16px;color:#3a2600;
+    background:linear-gradient(180deg,#ffe08a,var(--gold) 55%,var(--gold-2))}
+
+  footer{text-align:center;color:var(--txt-dim);font-size:11px;margin-top:34px;line-height:1.8}
+
+  /* ===== Tablet ===== */
+  @media(max-width:760px){
+    .grid{gap:16px}
+    .card + .card{margin-top:16px}
+  }
+
+  /* ===== Smartphone ===== */
+  @media(max-width:600px){
+    body{padding:14px 10px 44px}
+    header.top{margin-bottom:16px;gap:10px}
+    .brand .mark{width:40px;height:40px;font-size:18px}
+    .brand h1{font-size:18px}
+    .brand p{font-size:11px}
+    .tag{font-size:10px;padding:5px 9px;width:100%;text-align:center;order:3}
+    .grid{gap:14px}
+    .card{padding:16px;border-radius:15px}
+    .card + .card{margin-top:14px}
+    .card h2{font-size:12px;margin-bottom:13px}
+
+    /* coin */
+    .coin-scene,.coin{width:130px;height:130px}
+    .face{font-size:42px}
+    .face .lbl{font-size:12px;letter-spacing:2px}
+    .stage{gap:14px;padding:14px 0 4px}
+    .result-banner{font-size:16px}
+
+    /* hero */
+    .hero{padding:14px}
+    .hero .v{font-size:34px}
+    .hero .v .yen{font-size:18px}
+    .poolrow{gap:8px}
+    .poolcell{padding:8px 10px}
+    .poolcell b{font-size:15px}
+
+    /* stats: 2 columns */
+    .stats{grid-template-columns:repeat(2,1fr);gap:9px}
+    .stat{padding:10px 11px}
+    .stat .v{font-size:17px}
+    .stat .v.sm{font-size:15px}
+
+    /* controls — bigger tap targets, even wrapping */
+    input[type=number]{font-size:16px;padding:12px 12px}   /* 16px↑ で iOS の自動ズーム防止 */
+    .btns{gap:8px}
+    .mini{min-width:0;flex:1 1 calc(50% - 4px);padding:13px 8px;font-size:14px}
+    .add{flex:1 1 calc(50% - 4px)}
+    .bet{padding:16px;font-size:18px}
+    .poolbtns{flex-direction:column;gap:8px}
+    .pool{padding:14px;font-size:14px}
+    .strat-note{font-size:11px}
+
+    /* history */
+    .histwrap{max-height:260px}
+    th,td{padding:8px 9px;font-size:12px}
+    .copybtn{padding:7px 12px}
+
+    /* modal */
+    .modal{padding:26px 20px}
+    .modal .big{font-size:25px}
+  }
+
+  /* ===== Small phones ===== */
+  @media(max-width:380px){
+    .stats{grid-template-columns:1fr 1fr;gap:8px}
+    .hero .v{font-size:30px}
+    .coin-scene,.coin{width:116px;height:116px}
+    .face{font-size:38px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mark">¥</div>
+      <div>
+        <h1>コインベットゲーム</h1>
+        <p>マーチンゲール・固定比率・任意ベットの資金推移を体感検証</p>
+      </div>
+    </div>
+    <div class="tag">表＝勝ち / 裏＝負け ｜ 勝率50% ｜ 配当1倍</div>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT -->
+    <div>
+      <!-- Coin + balance -->
+      <div class="card">
+        <div class="stage">
+          <div class="coin-scene">
+            <div class="coin" id="coin">
+              <div class="face heads"><div class="ctr"><span>♕</span><span class="lbl">HEADS 表</span></div></div>
+              <div class="face tails"><div class="ctr"><span>✦</span><span class="lbl">TAILS 裏</span></div></div>
+            </div>
+          </div>
+          <div class="result-banner" id="banner"></div>
+        </div>
+
+        <div class="hero">
+          <div class="k">現在の所持金（プレイ中）</div>
+          <div class="v" id="balance"><span class="yen">¥</span>0</div>
+          <div class="pl" id="pl">累計損益 ±0</div>
+          <div class="poolrow">
+            <div class="poolcell"><span>💰 プール（確保益）</span><b id="h-pool">¥0</b></div>
+            <div class="poolcell"><span>総資産</span><b id="h-total">¥0</b></div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="k">賭け金</div><div class="v" id="s-bet">¥0</div></div>
+          <div class="stat"><div class="k">勝 / 負</div><div class="v sm" id="s-wl">0 / 0</div></div>
+          <div class="stat"><div class="k">勝率</div><div class="v" id="s-rate">—</div></div>
+          <div class="stat"><div class="k">最大総資産</div><div class="v sm" id="s-max">¥0</div></div>
+          <div class="stat"><div class="k">最小総資産</div><div class="v sm" id="s-min">¥0</div></div>
+          <div class="stat"><div class="k">最大ドローダウン</div><div class="v sm" id="s-dd">¥0</div></div>
+          <div class="stat"><div class="k">連敗 / 最大連敗</div><div class="v sm" id="s-streak">0 / 0</div></div>
+          <div class="stat"><div class="k">プレイ回数</div><div class="v sm" id="s-plays">0</div></div>
+          <div class="stat"><div class="k">直近の結果</div><div class="v sm" id="s-last">—</div></div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="card">
+        <h2>資金推移グラフ</h2>
+        <div class="chartbox"><canvas id="chart" height="220"></canvas></div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      <!-- Setup -->
+      <div class="card" id="setupCard">
+        <h2>初期設定</h2>
+        <div class="field">
+          <label>初期所持金（円）</label>
+          <input type="number" id="initBalance" value="10000" min="1" step="100">
+        </div>
+        <div class="field">
+          <label>初回賭け金（円）<span style="color:var(--txt-dim)">※0でも開始可。＋％/×2で組み立て</span></label>
+          <input type="number" id="initBet" value="0" min="0" step="100">
+        </div>
+        <button class="bet" id="startBtn">ゲーム開始</button>
+        <div class="err" id="setupErr"></div>
+      </div>
+
+      <!-- Operation -->
+      <div class="card" id="opCard" style="display:none">
+        <h2>操作エリア</h2>
+        <div class="field">
+          <label>賭け金（円）</label>
+          <input type="number" id="bet" value="0" min="0" step="100">
+        </div>
+        <label style="font-size:12px;color:var(--txt-dim);letter-spacing:.5px">賭け金を加算</label>
+        <div class="btns">
+          <button class="mini add" data-base="init" data-pct="1" title="初期所持金の1%を加算">＋1%(初期)</button>
+          <button class="mini add" data-base="cur"  data-pct="1" title="現在の所持金の1%を加算">＋1%(現在)</button>
+          <button class="mini add" data-base="init" data-pct="5" title="初期所持金の5%を加算">＋5%(初期)</button>
+          <button class="mini add" data-base="cur"  data-pct="5" title="現在の所持金の5%を加算">＋5%(現在)</button>
+        </div>
+        <div class="btns">
+          <button class="mini" id="x2">×2</button>
+          <button class="mini" id="resetBet" title="賭け金を0にする">0</button>
+        </div>
+
+        <button class="bet" id="betBtn">🪙 賭ける</button>
+        <div class="poolbtns">
+          <button class="pool" id="poolBtn" title="初期所持金を超えた余剰金をプールへ確保し、所持金を初期額に戻す">💰 余剰金をプール</button>
+          <button class="pool restore" id="restoreBtn" title="プールした資金を所持金へ戻す">↩ プールから戻す</button>
+        </div>
+        <button class="reset" id="resetBtn">ゲームをリセット</button>
+        <div class="err" id="err"></div>
+
+        <div class="strat-note">
+          <b>＋％(初期):</b> 基準は初期所持金で不変 → マーチンゲールで原資を回収できる<br>
+          <b>＋％(現在):</b> 基準は現在の所持金 → 負けるほど1単位が縮む（保守的）<br>
+          <b>マーチンゲール:</b> 負けたら「×2」、勝ったら「0」→初回額を入れ直す<br>
+          <b>固定比率:</b> 毎回「＋％(現在)」で現在の所持金の一定割合を賭ける<br>
+          <b>任意ベット:</b> 賭け金を自由に入力<br>
+          <b>💰 余剰金をプール:</b> 初期額を超えた分を確保し、所持金を初期額に戻して継続（利確）。総資産＝プール＋所持金<br>
+          <b>↩ プールから戻す:</b> 確保した資金を所持金へ戻す。所持金が0になってもプールが残っていれば戻して復帰可能
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="card">
+        <h2 class="row-h2">
+          <span class="row-h2-l">プレイ履歴</span>
+          <button class="copybtn" id="copyHist" title="履歴をクリップボードにコピー">📋 コピー</button>
+        </h2>
+        <div class="histwrap">
+          <table>
+            <thead><tr><th>#</th><th>賭け金</th><th>結果</th><th>損益</th><th>所持金</th></tr></thead>
+            <tbody id="hist"><tr><td colspan="5" class="empty">まだプレイ履歴はありません</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    コインベットゲーム ｜ 資金推移シミュレーター<br>
+    本ツールは戦略の資金推移を体感的に検証するためのもので、勝率は常に50%・配当1倍に固定されています。
+  </footer>
+</div>
+
+<!-- Game over -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="big">💀 ゲームオーバー</div>
+    <p>所持金が 0 になりました。<br>戦略の結果を振り返ってみましょう。</p>
+    <div id="goSummary"></div>
+    <button id="goReset">もう一度プレイ</button>
+  </div>
+</div>
+
+<script>
+(()=>{
+  "use strict";
+  const $=id=>document.getElementById(id);
+  const yen=n=>"¥"+Math.round(n).toLocaleString("ja-JP");
+  const signed=n=>(n>0?"+":n<0?"-":"±")+yen(Math.abs(n));
+
+  // ---- state ----
+  let S=null;
+  function freshState(initBal, initBet){
+    return {
+      initBal, initBet,
+      bal:initBal, bet:initBet,
+      pool:0,                       // 確保した余剰金（利確プール）
+      pooledCount:0,                // プール実行回数
+      wins:0, losses:0,
+      maxBal:initBal, minBal:initBal,
+      maxDD:0, peak:initBal,
+      streak:0, maxStreak:0,
+      plays:0,
+      curve:[initBal],              // 総資産（pool+bal）の推移
+      history:[],
+      over:false, flipping:false
+    };
+  }
+  const totalAssets = s => s.pool + s.bal;
+
+  // ---- elements ----
+  const el={
+    coin:$("coin"), banner:$("banner"),
+    balance:$("balance"), pl:$("pl"),
+    sBet:$("s-bet"), sWL:$("s-wl"), sRate:$("s-rate"),
+    sMax:$("s-max"), sMin:$("s-min"), sDD:$("s-dd"),
+    sStreak:$("s-streak"), sPlays:$("s-plays"), sLast:$("s-last"),
+    hPool:$("h-pool"), hTotal:$("h-total"),
+    bet:$("bet"), hist:$("hist"),
+    setupCard:$("setupCard"), opCard:$("opCard"),
+    err:$("err"), setupErr:$("setupErr")
+  };
+
+  // ---- render ----
+  function render(){
+    const s=S;
+    el.balance.innerHTML='<span class="yen">¥</span>'+Math.round(s.bal).toLocaleString("ja-JP");
+    el.balance.style.color = s.bal>=s.initBal ? "var(--green)" : "var(--red)";
+    const totAssets=totalAssets(s);
+    const plv=totAssets-s.initBal;      // 累計損益 = 総資産 - 初期所持金
+    el.pl.textContent="累計損益 "+signed(plv);
+    el.pl.style.color = plv>0?"var(--green)":plv<0?"var(--red)":"var(--txt-dim)";
+    el.hPool.textContent=yen(s.pool)+(s.pooledCount?` (${s.pooledCount}回)`:"");
+    el.hTotal.textContent=yen(totAssets);
+
+    el.sBet.textContent=yen(s.bet);
+    el.sWL.textContent=s.wins+" / "+s.losses;
+    const tot=s.wins+s.losses;
+    el.sRate.textContent=tot? (s.wins/tot*100).toFixed(1)+"%" : "—";
+    el.sMax.textContent=yen(s.maxBal);
+    el.sMin.textContent=yen(s.minBal);
+    el.sDD.textContent="-"+yen(s.maxDD);
+    el.sDD.style.color = s.maxDD>0?"var(--red)":"var(--txt)";
+    el.sStreak.textContent=s.streak+" / "+s.maxStreak;
+    el.sPlays.textContent=s.plays;
+
+    // history
+    if(!s.history.length){
+      el.hist.innerHTML='<tr><td colspan="5" class="empty">まだプレイ履歴はありません</td></tr>';
+    }else{
+      el.hist.innerHTML=s.history.map(h=>{
+        if(h.type==="pool"){
+          return `<tr class="poolhist">
+            <td>—</td>
+            <td>—</td>
+            <td class="res" style="text-align:center;color:var(--gold)">💰 プールへ確保</td>
+            <td style="color:var(--gold)">-${yen(h.amount)}</td>
+            <td>${yen(h.bal)}</td>
+          </tr>`;
+        }
+        if(h.type==="restore"){
+          return `<tr class="poolhist">
+            <td>—</td>
+            <td>—</td>
+            <td class="res" style="text-align:center;color:var(--gold)">↩ プールから戻す</td>
+            <td style="color:var(--green)">+${yen(h.amount)}</td>
+            <td>${yen(h.bal)}</td>
+          </tr>`;
+        }
+        const win=h.win;
+        const face=h.heads?'<span class="face-mini h"></span>':'<span class="face-mini t"></span>';
+        const rtxt=(h.heads?"表":"裏")+" / "+(win?"勝ち":"負け");
+        return `<tr>
+          <td>${h.n}</td>
+          <td>${yen(h.bet)}</td>
+          <td class="res">${face}<span style="color:${win?'var(--green)':'var(--red)'}">${rtxt}</span></td>
+          <td style="color:${win?'var(--green)':'var(--red)'}">${signed(win?h.bet:-h.bet)}</td>
+          <td>${yen(h.bal)}</td>
+        </tr>`;
+      }).reverse().join("");
+    }
+    drawChart();
+  }
+
+  // ---- chart ----
+  const cv=$("chart"), ctx=cv.getContext("2d");
+  function drawChart(){
+    const s=S, dpr=window.devicePixelRatio||1;
+    // 論理サイズは CSS レイアウト値（固定枠）から取得。bitmap は dpr 倍で確保する。
+    const w=cv.clientWidth, h=cv.clientHeight;
+    if(!w||!h)return;
+    cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const pad={l:8,r:8,t:14,b:14};
+    const data=s.curve;
+    const max=Math.max(...data, s.initBal), min=Math.min(...data,0);
+    const range=(max-min)||1;
+    const px=i=> data.length<2 ? pad.l+(w-pad.l-pad.r)/2 : pad.l + (w-pad.l-pad.r)*i/(data.length-1);
+    const py=v=> pad.t + (h-pad.t-pad.b)*(1-(v-min)/range);
+
+    // initial balance reference line
+    const yInit=py(s.initBal);
+    ctx.strokeStyle="rgba(141,151,189,.35)";ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(pad.l,yInit);ctx.lineTo(w-pad.r,yInit);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle="rgba(141,151,189,.7)";ctx.font="10px sans-serif";ctx.textAlign="left";
+    ctx.fillText("初期 "+yen(s.initBal), pad.l+2, yInit-4);
+
+    // area + line
+    const last=data[data.length-1];
+    const up=last>=s.initBal;
+    const col=up?"#3ddc84":"#ff5d6c";
+    const grad=ctx.createLinearGradient(0,pad.t,0,h-pad.b);
+    grad.addColorStop(0, up?"rgba(61,220,132,.32)":"rgba(255,93,108,.32)");
+    grad.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.beginPath();
+    data.forEach((v,i)=>{const x=px(i),y=py(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.lineTo(px(data.length-1),h-pad.b);ctx.lineTo(px(0),h-pad.b);ctx.closePath();
+    ctx.fillStyle=grad;ctx.fill();
+
+    ctx.beginPath();
+    data.forEach((v,i)=>{const x=px(i),y=py(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.lineJoin="round";ctx.stroke();
+
+    // last point dot
+    const lx=px(data.length-1),ly=py(last);
+    ctx.beginPath();ctx.arc(lx,ly,4,0,7);ctx.fillStyle=col;ctx.fill();
+    ctx.beginPath();ctx.arc(lx,ly,7,0,7);ctx.strokeStyle=col;ctx.globalAlpha=.4;ctx.stroke();ctx.globalAlpha=1;
+  }
+
+  // ---- start ----
+  $("startBtn").onclick=()=>{
+    const ib=parseFloat($("initBalance").value);
+    const bet=parseFloat($("initBet").value);
+    if(!Number.isFinite(ib)||ib<=0){return setErr("setupErr","初期所持金は1円以上の数字で入力してください");}
+    if(!Number.isFinite(bet)||bet<0){return setErr("setupErr","初回賭け金は0円以上の数字で入力してください");}
+    if(bet>ib){return setErr("setupErr","初回賭け金が初期所持金を超えています");}
+    setErr("setupErr","");
+    S=freshState(ib,bet);
+    el.bet.value=bet;
+    el.setupCard.style.display="none";
+    el.opCard.style.display="block";
+    el.banner.classList.remove("show");
+    clearPreset();
+    render();
+  };
+
+  function setErr(id,msg){$(id).textContent=msg;}
+
+  // ---- bet controls ----
+  $("x2").onclick=()=>{ if(guard())return; setBet(getBet()*2); clearPreset(); };
+  $("resetBet").onclick=()=>{ if(guard())return; setBet(0); clearPreset(); };
+
+  document.querySelectorAll(".add").forEach(b=>{
+    b.onclick=()=>{ if(guard())return;
+      const base = b.dataset.base==="init" ? S.initBal : S.bal;
+      setBet(getBet() + base*parseFloat(b.dataset.pct)/100);
+      clearPreset();
+    };
+  });
+
+  function clearPreset(){/* presets removed */}
+
+  // ---- pool surplus (利確) ----
+  $("poolBtn").onclick=()=>{
+    if(guard())return;
+    const s=S;
+    const surplus=Math.round(s.bal - s.initBal);
+    if(surplus<=0){ return setErr("err","余剰金がありません（所持金が初期額を超えたらプールできます）"); }
+    setErr("err","");
+    s.pool += surplus;
+    s.pooledCount++;
+    s.bal = s.initBal;                 // プレイ用の所持金を初期額へ戻す（総資産は不変）
+    s.history.push({type:"pool", amount:surplus, bal:s.bal});
+    setBet(s.initBet);                 // 賭け金も初回額に戻す
+    clearPreset();
+    el.banner.innerHTML=`<span class="chip win">💰 プール</span><span class="delta up">${signed(surplus)} を確保</span>`;
+    el.banner.classList.add("show");
+    render();
+  };
+
+  // ---- restore from pool (プールから戻す) ----
+  $("restoreBtn").onclick=()=>{
+    const s=S;
+    if(!s||s.flipping)return;            // over でも戻せる（busted → 復帰用）
+    const amt=Math.round(s.pool);
+    if(amt<=0){ return setErr("err","プールに資金がありません"); }
+    setErr("err","");
+    s.pool=0;
+    s.bal+=amt;
+    if(s.over && s.bal>0){               // ゲームオーバーから復帰
+      s.over=false;
+      $("overlay").classList.remove("show");
+    }
+    s.history.push({type:"restore", amount:amt, bal:s.bal});
+    clearPreset();
+    el.banner.innerHTML=`<span class="chip win">↩ 戻し</span><span class="delta up">${signed(amt)} を所持金へ</span>`;
+    el.banner.classList.add("show");
+    render();
+  };
+
+  el.bet.addEventListener("input",()=>{ if(S){S.bet=getBet(); el.sBet.textContent=yen(S.bet); clearPreset();}});
+
+  function getBet(){const v=parseFloat(el.bet.value);return Number.isFinite(v)?v:0;}
+  function setBet(v){v=Math.max(0,Math.round(v));el.bet.value=v;S.bet=v;el.sBet.textContent=yen(v);}
+  function guard(){return !S||S.over||S.flipping;}
+
+  // ---- bet / flip ----
+  $("betBtn").onclick=()=>{
+    if(guard())return;
+    const bet=getBet();
+    if(!Number.isFinite(bet)||bet<=0){return setErr("err","賭け金は1円以上の数字を入力してください");}
+    if(bet>S.bal){return setErr("err","賭け金が所持金（"+yen(S.bal)+"）を超えています");}
+    setErr("err","");
+    S.bet=bet; S.flipping=true;
+    el.banner.classList.remove("show");
+
+    const heads=Math.random()<0.5;       // 表=勝ち
+    // animation end rotation: land on correct face
+    const spins=4;
+    const end = heads ? spins*360 : spins*360+180;
+    el.coin.style.setProperty("--end", end+"deg");
+    el.coin.classList.remove("flipping");
+    void el.coin.offsetWidth;            // reflow
+    el.coin.classList.add("flipping");
+
+    setTimeout(()=>{ resolve(heads,bet); }, 1600);
+  };
+
+  function resolve(heads, bet){
+    const s=S, win=heads;
+    s.bal += win? bet : -bet;
+    s.bal=Math.round(s.bal);
+    s.plays++;
+    if(win){s.wins++; s.streak=0;}
+    else{s.losses++; s.streak++; s.maxStreak=Math.max(s.maxStreak,s.streak);}
+
+    const tot=totalAssets(s);            // 統計・推移は総資産（pool+bal）基準
+    s.maxBal=Math.max(s.maxBal,tot);
+    s.minBal=Math.min(s.minBal,tot);
+    s.peak=Math.max(s.peak,tot);
+    s.maxDD=Math.max(s.maxDD, s.peak-tot);
+    s.curve.push(tot);
+    s.history.push({n:s.plays, bet, heads, win, bal:s.bal});
+
+    // banner
+    el.banner.innerHTML =
+      `<span class="chip ${win?'win':'lose'}">${heads?'表':'裏'} / ${win?'WIN':'LOSE'}</span>
+       <span class="delta ${win?'up':'down'}">${signed(win?bet:-bet)}</span>`;
+    el.banner.classList.add("show");
+    el.sLast.textContent=(heads?'表':'裏')+' '+(win?'勝':'負');
+    el.sLast.style.color=win?'var(--green)':'var(--red)';
+
+    s.flipping=false;
+
+    // martingale convenience: keep bet as-is; user uses ×2 / reset buttons
+    render();
+
+    if(s.bal<=0){
+      if(s.pool>0){
+        // 所持金は尽きたがプールが残っている → 復帰可能。ゲームオーバーにしない
+        el.banner.innerHTML=`<span class="chip lose">所持金 0</span>`+
+          `<span class="delta down">「↩ プールから戻す」で継続できます</span>`;
+        el.banner.classList.add("show");
+      }else{
+        s.over=true;
+        showGameOver();
+      }
+    }
+  }
+
+  // ---- copy history ----
+  $("copyHist").onclick=async()=>{
+    const s=S, btn=$("copyHist");
+    if(!s.history.length){ flashCopy(btn,"履歴なし"); return; }
+    const head=["回数","賭け金","コイン","勝敗","損益","所持金"].join("\t");
+    const rows=s.history.map(h=>{
+      if(h.type==="pool")    return ["—","—","プール","確保","-"+Math.round(h.amount), Math.round(h.bal)].join("\t");
+      if(h.type==="restore") return ["—","—","戻し","復元","+"+Math.round(h.amount), Math.round(h.bal)].join("\t");
+      return [h.n, Math.round(h.bet), (h.heads?"表":"裏"), (h.win?"勝ち":"負け"),
+              (h.win?"+":"-")+Math.round(h.bet), Math.round(h.bal)].join("\t");
+    });
+    const tot=s.wins+s.losses, total=Math.round(totalAssets(s));
+    const summary=[
+      "",
+      `初期所持金\t${Math.round(s.initBal)}`,
+      `所持金(プレイ中)\t${Math.round(s.bal)}`,
+      `プール(確保益)\t${Math.round(s.pool)}`,
+      `総資産\t${total}`,
+      `累計損益\t${(total-s.initBal>=0?"+":"-")+Math.abs(total-Math.round(s.initBal))}`,
+      `勝/負\t${s.wins}/${s.losses}`,
+      `勝率\t${tot?(s.wins/tot*100).toFixed(1)+"%":"-"}`,
+      `最大ドローダウン\t-${Math.round(s.maxDD)}`,
+      `最大連敗\t${s.maxStreak}`
+    ].join("\n");
+    const text=[head,...rows].join("\n")+"\n"+summary+"\n";
+    const ok=await copyText(text);
+    flashCopy(btn, ok?"✓ コピー完了":"コピー失敗");
+  };
+  function flashCopy(btn,msg){
+    const orig="📋 コピー";
+    btn.textContent=msg; btn.classList.add("done");
+    setTimeout(()=>{btn.textContent=orig; btn.classList.remove("done");},1400);
+  }
+  async function copyText(text){
+    try{
+      if(navigator.clipboard&&window.isSecureContext){
+        await navigator.clipboard.writeText(text); return true;
+      }
+    }catch(e){/* fall through to legacy */}
+    try{
+      const ta=document.createElement("textarea");
+      ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      const ok=document.execCommand("copy");
+      document.body.removeChild(ta); return ok;
+    }catch(e){ return false; }
+  }
+
+  // ---- reset ----
+  function backToSetup(){
+    el.opCard.style.display="none";
+    el.setupCard.style.display="block";
+    el.banner.classList.remove("show");
+    el.coin.classList.remove("flipping");
+    el.coin.style.setProperty("--end","0deg");
+    $("overlay").classList.remove("show");
+    const ib0=parseFloat($("initBalance").value), bet0=parseFloat($("initBet").value);
+    S=freshState(Number.isFinite(ib0)&&ib0>0?ib0:10000, Number.isFinite(bet0)&&bet0>=0?bet0:0);
+    render();
+  }
+  $("resetBtn").onclick=backToSetup;
+  $("goReset").onclick=backToSetup;
+
+  function showGameOver(){
+    const s=S, tot=s.wins+s.losses;
+    $("goSummary").innerHTML=`
+      <div class="sumrow"><span>プレイ回数</span><span>${s.plays} 回</span></div>
+      <div class="sumrow"><span>勝 / 負</span><span>${s.wins} / ${s.losses}</span></div>
+      <div class="sumrow"><span>勝率</span><span>${tot?(s.wins/tot*100).toFixed(1):0}%</span></div>
+      <div class="sumrow"><span>💰 プール（確保益）</span><span style="color:var(--gold)">${yen(s.pool)}</span></div>
+      <div class="sumrow"><span>最終総資産</span><span style="color:${s.pool>=s.initBal?'var(--green)':'var(--txt)'}">${yen(totalAssets(s))}</span></div>
+      <div class="sumrow"><span>最大総資産</span><span>${yen(s.maxBal)}</span></div>
+      <div class="sumrow"><span>最大連敗</span><span>${s.maxStreak} 連敗</span></div>
+      <div class="sumrow"><span>最大ドローダウン</span><span style="color:var(--red)">-${yen(s.maxDD)}</span></div>`;
+    setTimeout(()=>$("overlay").classList.add("show"),500);
+  }
+
+  // initial empty chart sizing
+  S=freshState(10000,0);
+  render();
+  window.addEventListener("resize",()=>S&&drawChart());
+})();
+</script>
+</body>
+</html>
