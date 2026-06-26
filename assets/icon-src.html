@@ -1,0 +1,51 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;padding:0}svg{display:block}</style></head>
+<body>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2750"/>
+      <stop offset="0.55" stop-color="#121831"/>
+      <stop offset="1" stop-color="#0a0e1a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.36" r="0.75">
+      <stop offset="0" stop-color="#2a3361" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#0a0e1a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="0.36" cy="0.30" r="0.85">
+      <stop offset="0" stop-color="#fff0bf"/>
+      <stop offset="0.48" stop-color="#f4c452"/>
+      <stop offset="0.80" stop-color="#e0a526"/>
+      <stop offset="1" stop-color="#9a6a10"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe9a8"/>
+      <stop offset="1" stop-color="#8c5f0d"/>
+    </linearGradient>
+    <filter id="ds" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- background -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+
+  <!-- coin -->
+  <g filter="url(#ds)">
+    <circle cx="256" cy="248" r="172" fill="url(#rim)"/>
+    <circle cx="256" cy="248" r="158" fill="url(#coin)"/>
+    <circle cx="256" cy="248" r="158" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="6"/>
+    <circle cx="256" cy="248" r="132" fill="none" stroke="#8c5f0d" stroke-opacity="0.45" stroke-width="4"/>
+    <!-- ¥ -->
+    <text x="256" y="248" font-family="Arial, Helvetica, sans-serif" font-size="200" font-weight="900"
+          fill="#6a4700" text-anchor="middle" dominant-baseline="central">¥</text>
+  </g>
+
+  <!-- upward trend ticks (資金推移) -->
+  <g stroke="#3ddc84" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.95">
+    <polyline points="150,452 215,420 280,440 365,372"/>
+  </g>
+  <polygon points="365,372 345,366 360,352" fill="#3ddc84" opacity="0.95"/>
+</svg>
+</body></html>
